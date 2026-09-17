@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.hmap
+*.ipa
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Private / sensitive material (test docs, original artwork)
+private/
+
+# Local coding-agent skills
+.agents/
+
+# Logs & temp
+*.log
+*.tmp
+
+# App data written at runtime
+*.npy

@@ -1,8 +1,6 @@
 //
 //  YuE2MacApp.swift
-//  YuE2Mac
-//
-//  Created by Chen Jin Shen on 14/09/2026.
+//  YuE2Mac — local AI songwriting on Apple Silicon.
 //
 
 import SwiftUI
@@ -13,5 +11,7 @@ struct YuE2MacApp: App {
         WindowGroup {
             ContentView()
         }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1080, height: 720)
     }
 }
