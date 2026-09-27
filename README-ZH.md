@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/logo.jpg" alt="YuE2Mac 标志" width="64" />
+  <img src="img/logo.png" alt="YuE2Mac 标志" width="64" />
   <br />
   <h1 align="center">YuE2Mac</h1>
   <p align="center">本地 AI 作曲工坊（适用于 Apple Silicon）—— 歌词 + 风格 → 一首完整的歌曲。</p>

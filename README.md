@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="img/logo.jpg" alt="YuE2Mac Logo" width="64" />
+  <img src="img/logo.png" alt="YuE2Mac Logo" width="64" />
   <br />
   <h1 align="center">YuE2Mac</h1>
   <p align="center">Local AI Songwriting Studio for Apple Silicon — Lyrics + Style → A Full Song.</p>
@@ -147,33 +147,14 @@ bash scripts/run_app.sh
 
 Contributions are welcome. To contribute: fork the repo, make a branch, commit with a clear message, and open a pull request. For bugs or feature requests, open an [issue](https://github.com/arinltte/YuE2Mac/issues) and include your macOS version and reproduction steps.
 
-## 📄 License & Acknowledgements
+## 📜 License
 
-The YuE2Mac application source is licensed under the [MIT License](./LICENSE.txt).
+Distributed under the MIT License. See `LICENSE` for more information.
 
-*   **Base model:** [**YuE**](https://github.com/multimodal-art-projection/YuE) — an open foundation model family for long-form music generation, and its research project [map-yue2.github.io](https://map-yue2.github.io). Please cite it:
-    ```bibtex
-    @article{li2023mert,
-      title = {{MERT}: Acoustic Music Understanding Model with Large-Scale Self-supervised Training},
-      author = {Li, Yizhi and Yuan, Ruibin and Zhang, Ge and Ma, Yinghao and Chen, Xingran and Yin, Hanzhi and Xiao, Chenghao and Lin, Chenghua and Ragni, Anton and Benetos, Emmanouil and Gyenge, Norbert and Dannenberg, Roger and Liu, Ruibo and Chen, Wenhu and Xia, Gus and Shi, Yemin and Huang, Wenhao and Wang, Zili and Guo, Yike and Fu, Jie},
-      journal = {arXiv preprint arXiv:2306.00107},
-      year = {2023},
-      eprint = {2306.00107},
-      archivePrefix = {arXiv},
-      url = {https://arxiv.org/abs/2306.00107}
-    }
+<p align="center">
+  <i>Logo by GUMO · https://www.instagram.com/gumoooo._/</i>
+</p>
 
-    @article{yuan2025yue,
-      title = {{YuE}: Scaling Open Foundation Models for Long-Form Music Generation},
-      author = {Yuan, Ruibin and Lin, Hanfeng and Guo, Shuyue and Zhang, Ge and Pan, Jiahao and Zang, Yongyi and Liu, Haohe and Liang, Yiming and Ma, Wenye and Du, Xingjian and Du, Xinrun and Ye, Zhen and Zheng, Tianyu and Jiang, Zhengxuan and Ma, Yinghao and Liu, Minghao and Tian, Zeyue and Zhou, Ziya and Xue, Liumeng and Qu, Xingwei and Li, Yizhi and Wu, Shangda and Shen, Tianhao and Ma, Ziyang and Zhan, Jun and Wang, Chunhui and Wang, Yatian and Chi, Xiaowei and Zhang, Xinyue and Yang, Zhenzhu and Wang, Xiangzhou and Liu, Shansong and Mei, Lingrui and Li, Peng and Wang, Junjie and Yu, Jianwei and Pang, Guojian and Li, Xu and Wang, Zihao and Zhou, Xiaohuan and Yu, Lijun and Benetos, Emmanouil and Chen, Yong and Lin, Chenghua and Chen, Xie and Xia, Gus and Zhang, Zhaoxiang and Zhang, Chao and Chen, Wenhu and Zhou, Xinyu and Qiu, Xipeng and Dannenberg, Roger and Liu, Jiaheng and Yang, Jian and Huang, Wenhao and Xue, Wei and Tan, Xu and Guo, Yike},
-      journal = {arXiv preprint arXiv:2503.08638},
-      year = {2025},
-      eprint = {2503.08638},
-      archivePrefix = {arXiv},
-      url = {https://arxiv.org/abs/2503.08638}
-    }
-    ```
-*   **MLX engine port:** the `YuE2-3B-MLX` conversion (`generate.py`, model modules) that this app wraps.
-*   **CPU/GPU runtime:** [Apple MLX](https://github.com/ml-explore/mlx).
-
-We're grateful to the open-source AI community for making local music generation possible.
+<p align="center">
+  <i>Developed by arinltte · arinltte00@gmail.com</i>
+</p>

@@ -390,6 +390,8 @@ struct GeneratorView: View {
                 .font(.system(.caption)).foregroundStyle(.secondary)
             Text("Model: YuE2-3B (8-bit MLX)")
                 .font(.system(.caption2)).foregroundStyle(.tertiary)
+            Text("Developed by arinltte · arinltte00@gmail.com")
+                .font(.system(.caption2)).foregroundStyle(.secondary)
 
             Button(action: checkForUpdates) {
                 Text(updateStatusText)
