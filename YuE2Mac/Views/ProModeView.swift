@@ -279,6 +279,10 @@ struct ProModeView: View {
                               : "How many times the audio is refined. 32 is a good default.")
                     .disabled(settings.draftPreview)
                     .opacity(settings.draftPreview ? 0.5 : 1)
+                labeledSlider("CFG — obedience", $settings.cfgScale, 1...15, whole: false, theme: theme,
+                              help: "Higher follows your style more strictly; lower is more creative. 5 is a good default.")
+                    .disabled(settings.draftPreview)
+                    .opacity(settings.draftPreview ? 0.5 : 1)
             }
             .padding(12)
         }
@@ -291,13 +295,13 @@ struct ProModeView: View {
             VStack(alignment: .leading, spacing: 10) {
                 DisclosureGroup(isExpanded: $showAdvanced) {
                     VStack(alignment: .leading, spacing: 10) {
-                        labeledSlider("Temperature", $settings.temperature, 0.1...1.5, whole: false, theme: theme,
+                        labeledSlider("Temperature", $settings.temperature, 0.1...1.5, whole: false, theme: theme, step: 0.05,
                                       help: "Higher = wilder note choices. 1.0 is the model default.")
-                        labeledSlider("Top-p", $settings.topP, 0.5...1.0, whole: false, theme: theme,
+                        labeledSlider("Top-p", $settings.topP, 0.5...1.0, whole: false, theme: theme, step: 0.01,
                                       help: "Nucleus sampling cut-off. 0.95 is the model default.")
                         labeledSlider("Top-k", $settings.topK, 1...500, whole: true, theme: theme,
                                       help: "Only the k most likely notes are considered. 100 is the model default.")
-                        labeledSlider("Repetition penalty", $settings.repPenalty, 1.0...1.6, whole: false, theme: theme,
+                        labeledSlider("Repetition penalty", $settings.repPenalty, 1.0...1.6, whole: false, theme: theme, step: 0.05,
                                       help: "Above 1 discourages the model from replaying a memorized song. 1.2 is the model default.")
                         HStack {
                             Spacer()

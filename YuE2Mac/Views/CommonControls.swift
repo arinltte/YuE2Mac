@@ -59,12 +59,22 @@ func labeledSlider(_ title: String,
             Text(formatValue(bound.wrappedValue, whole: whole))
                 .font(.system(.subheadline, design: .monospaced)).foregroundStyle(.primary)
         }
-        Slider(value: bound, in: range, step: step).tint(theme.accentColor)
+        // SwiftUI precondition-crashes when the step is larger than the span
+        // ("max stride must be positive") — degrade to a continuous slider
+        // instead of taking the app down on a config mistake.
+        if step > 0, range.upperBound - range.lowerBound >= step {
+            Slider(value: bound, in: range, step: step).tint(theme.accentColor)
+        } else {
+            Slider(value: bound, in: range).tint(theme.accentColor)
+        }
     }
 }
 
 func formatValue(_ v: Double, whole: Bool) -> String {
-    whole ? "\(Int(v))" : String(format: "%.2g", v)
+    if whole { return "\(Int(v))" }
+    // Up to two decimals, without trailing zeros ("5" not "5.00", "0.95" as-is).
+    return String(format: "%.2f", v)
+        .replacingOccurrences(of: #"\.?0+$"#, with: "", options: .regularExpression)
 }
 
 // MARK: - Stage chips (Load → Plan → Compose → Refine → Render → Save)
