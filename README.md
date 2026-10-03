@@ -25,13 +25,17 @@ Powered by YuE2 (a Mixture-of-Transformers model) running at 8-bit on the Apple 
 
 ## ✨ Top Features
 
-*   🌸 **Lyrics + Style → Song:** Write your own lyrics or load a built-in sample set, describe the sound, and get a full song.
-*   🎲 **Style Shuffle (non-AI):** Press the ↻ arrow next to **Style prompt** to cycle through a bundled list of ready-made style starters — no AI, just ideas.
+*   🎚 **Two Modes, One Click:** A toolbar switch flips the whole studio between **Lite** (two steps and a big button — perfect for a first song) and **Pro** (queue, sampling controls, score editing, library tools). Your work follows you between modes.
+*   🌸 **Lyrics + Style → Song:** Write your own lyrics or load a built-in sample set, describe the sound, and get a full song. On Apple-Intelligence Macs (macOS 26+), a **Write with AI** button drafts a full lyric sheet on-device — nothing leaves your Mac.
+*   🎛 **Style Catalog:** A curated, categorized set of style starters (chips in Lite, a browser in Pro) — from Bossa Nova to Synthwave, with “Surprise me”.
+*   🌹 **Draft → Finish:** Generate a fast 8-step preview, then press **Finish at full quality** — it reuses the exact same take (saved song tokens + seed) and only refines it at 32 steps.
+*   📚 **Song Library:** Every song lands in its own timestamped folder with its seed, settings and score. Search, replay, export **M4A**, take a **new variation**, or delete — plus your old loose `.wav` files are still listed.
+*   ⏳ **Queue:** Queue as many songs as you like; one renders at a time with live stage chips (Load → Plan → Compose → Refine → Render → Save) and tokens/s readout. Queued jobs cancel instantly; stops are honestly labelled.
+*   🎼 **ABC Score Studio:** The score YuE2 writes is saved next to every song. Edit it, validate it, **make the song instrumental** (the official Vocal→Ins recipe), or re-render with the same seed — all inside the app.
 *   🧠 **Model Version Choice:** The installer pre-selects a model (**8-bit / 4-bit / bf16**) based on your Mac's RAM and spec, then downloads exactly that one.
 *   🪗 **Planning (COT):** *Full* writes a chord-annotated chart, *Melody only* writes a melody outline, *Off* goes straight to audio for speed.
-*   🎚 **Quality Controls:** Refinement steps, CFG (how strictly it follows your style), song length, and a reproducible seed.
-*   🎼 **ABC Score:** When planning is on, the generated ABC notation is saved alongside the song and can be opened with one click.
-*   🎹 **Instrumental Mode:** One switch injects *instrumental, no vocals* and strips lyrics to structure tags — taming the model's vocal bias.
+*   🎚 **Advanced Sampling (Pro):** Temperature, top-p, top-k and repetition penalty — mirroring the engine's generation config, with one-click reset.
+*   🎹 **Instrumental Mode:** One switch injects *instrumental, no vocals* and strips lyrics to structure tags — taming the model's vocal bias. In Pro, the score editor can do the robust Vocal→Ins rewrite instead.
 *   ❓ **Help Icons:** Every control has an explanation icon (hover for a tooltip, click for a quick card).
 *   🎨 **Ambient Themes:** Studio / Stage / Vinyl — animated ambient backgrounds that adapt with the UI.
 *   ⚡ **Smart Resource Handling:** The engine runs as a child process and is unloaded from memory the moment a song finishes, keeping your Mac responsive.
@@ -66,20 +70,26 @@ The app sets up its own Python environment and dependencies automatically. Befor
 
 ## 🚀 Getting Started
 
-1.  **Style:** Describe the mood/instruments, or press the **↻ arrow** to shuffle a ready-made starter.
-2.  **Lyrics:** Type your lyrics with structure tags (`[Verse]`, `[Chorus]`…), use the tag buttons, or press **Samples** to load a built-in set.
-3.  **Planning & Quality:** pick *Full / Melody / Off*, then set steps, CFG, length, and (optionally) a seed for reproducible takes.
-4.  **Generate:** press **Generate Song**. Watch friendly progress in the bottom-left panel; the big button becomes **Stop** while it works.
-5.  **Enjoy:** play the result inline, open the **ABC score**, or **Show in Finder**.
+The toolbar switch at the top picks your mode:
+
+*   **Lite** — pick a vibe from the chips (or let **Surprise me** choose), write lyrics (or press **Write with AI** on supported Macs), and hit the big **Generate Song** button. Optionally flip on **Quick preview** for a fast draft you can *finish* later at full quality.
+*   **Pro** — everything above, plus: **queue** several songs at once (they run one at a time, each with live stage chips), **model/planning** pickers, **quality** (steps + draft toggle), **advanced sampling** (temperature / top-p / top-k / repetition penalty), **song length**, and a **seed** field.
+
+After generating, every song lives in its own folder in the **library** (`Output/<date> <title>/`) with its WAV, ABC score, saved song project, and a `song.json` sidecar of settings. From the result panel or the library you can **replay**, **finish a draft at full quality** (same take, 32 steps), **edit the ABC score and re-render**, **take a new variation**, **export M4A**, or **delete**.
 
 ## 🧠 Feature explanations
 
-*   **Style shuffle (↻):** cycles through a `Presets.swift` list of ~10 starter styles. It doesn't call AI — it's a rotating list so you never stare at a blank box.
+*   **Draft → Finish:** *Quick preview* renders with 8 steps (≈4× faster). The take's semantic tokens and seed are saved, so **Finish at full quality** re-renders the *same* composition at 32 steps — no re-composing, no surprises.
+*   **Queue:** songs render one at a time; a queued job cancels instantly, a running one stops at the next step and is honestly labelled *Stopped* (never *Failed*).
+*   **Style catalog:** a curated, categorized set of ~40 starters (chips in Lite, full browser in Pro) — no AI, just ideas.
+*   **Write with AI (macOS 26+ with Apple Intelligence):** drafts a structured lyric sheet on-device via Apple's FoundationModels, with per-section guides. Hidden automatically when unsupported.
 *   **Help icons (❓):** each slider/switch shows a tooltip on hover and a short explainer card on click.
 *   **Samples (lyrics):** loads ready-made lyric sets, including an **Instrumental only** template.
-*   **Instrumental:** adds `instrumental, no vocals` to the prompt and keeps only the structural tags from your lyrics.
+*   **Instrumental:** adds `instrumental, no vocals` to the prompt and keeps only the structural tags from your lyrics. In Pro, the score editor can instead rewrite the ABC directly (Vocal → Ins) — the official, most robust YuE2 recipe.
+*   **Score editing (Pro):** every planned song saves its ABC score. The editor validates your edits (notes/bars/voices), warns when the structure changed a lot, and re-renders with the same seed — or a fresh one.
 *   **Planning (COT):** *Full* = plans chords + melody, *Melody only* = melody outline, *Off* = straight to audio (fastest, may lose the beat).
 *   **CFG:** how strictly the model follows your style prompt. Higher = more obedient, possibly less creative.
+*   **Sampling (Pro):** temperature (wildness), top-p/top-k (candidate cut-offs), repetition penalty (stops the model replaying a memorized song). Defaults mirror the engine's own config.
 *   **Seed:** same lyrics + same seed = the same song. Leave blank for a random take.
 
 ## 🔬 Tested Generation (M4 · 16 GB · 8-bit)
@@ -123,9 +133,9 @@ All generation happens locally on your GPU. No telemetry, no cloud APIs.
 | Location | Contents |
 | :--- | :--- |
 | `~/Library/Application Support/YuE2Mac/Python` | Isolated Python venv + pip packages (mlx, numpy, tiktoken). |
-| `~/Library/Application Support/YuE2Mac/Scripts` | `generate.py` + the model modules, downloaded from Hugging Face. |
+| `~/Library/Application Support/YuE2Mac/Scripts` | `generate.py` + the model modules from Hugging Face, plus the app's bundled `yue2_pro.py` add-on (draft/finish, sampling, saved takes). |
 | `~/Library/Application Support/YuE2Mac/Models` | The chosen model weights (8-bit/4-bit/bf16), downloaded from Hugging Face. |
-| `~/Library/Application Support/YuE2Mac/Output` | Your generated songs (`song.wav`). |
+| `~/Library/Application Support/YuE2Mac/Output` | Your songs — one timestamped folder each (`song.wav`, `song.abc`, `song.tokens.json`, `song.json`). |
 
 ## Uninstallation
 

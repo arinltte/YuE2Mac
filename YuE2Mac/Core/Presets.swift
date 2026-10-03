@@ -1,25 +1,12 @@
 //
-//  Presets.swift — bundled (non-AI) starter prompts & lyric sets the user can
-//  shuffle/load. Keeping them in plain arrays keeps the app lightweight and offline.
+//  Presets.swift — bundled (non-AI) starter lyric sets the user can load with
+//  one click. Style starters live in StyleCatalog.swift now (curated +
+//  categorized). Keeping them in plain arrays keeps the app lightweight and offline.
 //
 
 import Foundation
 
 enum Presets {
-    /// Starter style prompts. The shuffle button in the UI cycles through these.
-    static let styles: [String] = [
-        "English, indie pop, warm lead vocal, bright acoustic guitar, soft drums",
-        "English, lo-fi, mellow, vinyl warmth, gentle piano, light tape hiss",
-        "English, dream pop, airy vocals, lush reverb, shimmering synths",
-        "English, bedroom folk, intimate vocal, fingerpicked guitar, close mic",
-        "English, soft rock, 70s feel, smooth bass, electric piano, brushed drums",
-        "English, cinematic, sparse, piano and strings, emotional build",
-        "English, bossa nova, relaxed, nylon guitar, soft percussion",
-        "English, synthwave, retro, driving bassline, gated reverb, bright lead",
-        "English, r&b, soulful vocal, warm keys, subtle groove, tight drums",
-        "English, acoustic singer-songwriter, gentle, heartfelt, roomy reverb",
-    ]
-
     struct LyricSet {
         let name: String
         let text: String

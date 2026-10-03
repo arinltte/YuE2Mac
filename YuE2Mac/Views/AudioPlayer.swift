@@ -1,5 +1,7 @@
 //
-//  AudioPlayer.swift — a compact AVAudioPlayer wrapper to audition the result.
+//  AudioPlayer.swift — a compact inline player. The AVAudioPlayer is created
+//  lazily on the first play tap (a library list shouldn't preload every wav),
+//  and the total time comes from a cheap WAV-header parse.
 //
 
 import SwiftUI
@@ -10,8 +12,9 @@ struct AudioPlayer: View {
     @State private var player: AVAudioPlayer?
     @State private var isPlaying = false
     @State private var current: TimeInterval = 0
-    @State private var duration: TimeInterval = 0
     @State private var observer: Timer?
+
+    private var duration: TimeInterval { SongLibrary.wavDuration(url) ?? 0 }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -35,15 +38,14 @@ struct AudioPlayer: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 44)
         }
-        .onAppear(perform: prepare)
         .onDisappear(perform: stopAndCleanup)
     }
 
-    private func prepare() {
-        guard let p = try? AVAudioPlayer(contentsOf: url) else { return }
+    private func ensurePlayer() -> AVAudioPlayer? {
+        if let p = player { return p }
+        guard let p = try? AVAudioPlayer(contentsOf: url) else { return nil }
         p.prepareToPlay()
         player = p
-        duration = p.duration
         observer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
             guard let p = self.player else { return }
             Task { @MainActor in
@@ -51,10 +53,11 @@ struct AudioPlayer: View {
                 if !p.isPlaying { self.isPlaying = false }
             }
         }
+        return p
     }
 
     private func toggle() {
-        guard let p = player else { return }
+        guard let p = ensurePlayer() else { return }
         if p.isPlaying {
             p.pause()
             isPlaying = false
