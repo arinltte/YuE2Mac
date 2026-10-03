@@ -479,7 +479,7 @@ final class GenerationEngine {
             return
         }
 
-        var meta = SongMetadata(
+        let meta = SongMetadata(
             title: job.title,
             createdAt: Date(),
             style: job.style,
