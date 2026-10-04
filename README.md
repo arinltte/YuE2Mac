@@ -23,6 +23,20 @@ Powered by YuE2 (a Mixture-of-Transformers model) running at 8-bit on the Apple 
 
 > **Original models & research:** [YuE project page](https://map-yue2.github.io) · [YuE on GitHub](https://github.com/multimodal-art-projection/YuE) · [MERT](https://arxiv.org/abs/2306.00107)
 
+## 🆕 What's new in v0.1.2
+
+The whole studio was rebuilt around two modes, and the Tier-1 ideas from the [ecosystem analysis](./ECOSYSTEM_ANALYSIS.md) landed:
+
+*   **Two modes** — *Lite* (two steps and a big button) and *Pro* (the full studio), switched from the toolbar; your work follows you between modes.
+*   **Queue** — line up as many songs as you like; one renders at a time, with live stage chips (Load → Plan → Compose → Refine → Render → Save) and a tokens/s readout.
+*   **Draft → Finish** — render a fast 8-step preview, then press *Finish at full quality* to re-render **the same take** (saved tokens + seed) at 32 steps.
+*   **Song Library** — every song lands in its own timestamped folder with its score, seed and settings; search, replay, export M4A, take a new variation, or delete.
+*   **ABC Score Studio** — edit the score YuE2 planned for you, validate your edits, rewrite vocals to instrumental (the official recipe), and re-render with the same seed.
+*   **Advanced sampling** — temperature, top-p, top-k, repetition penalty, with one-click reset.
+*   **Write with AI** — on-device lyric drafting via Apple FoundationModels on Apple-Intelligence Macs (macOS 26+). Nothing downloads, nothing leaves your Mac.
+*   **Style catalog** — ~40 categorized style starters, chips in Lite and a browser in Pro, plus “Surprise me”.
+*   **Help everywhere** — every control explains itself: hover the ❓ for a tooltip, click it for a short card.
+
 ## ✨ Top Features
 
 *   🎚 **Two Modes, One Click:** A toolbar switch flips the whole studio between **Lite** (two steps and a big button — perfect for a first song) and **Pro** (queue, sampling controls, score editing, library tools). Your work follows you between modes.
@@ -82,7 +96,7 @@ After generating, every song lives in its own folder in the **library** (`Output
 *   **Draft → Finish:** *Quick preview* renders with 8 steps (≈4× faster). The take's semantic tokens and seed are saved, so **Finish at full quality** re-renders the *same* composition at 32 steps — no re-composing, no surprises.
 *   **Queue:** songs render one at a time; a queued job cancels instantly, a running one stops at the next step and is honestly labelled *Stopped* (never *Failed*).
 *   **Style catalog:** a curated, categorized set of ~40 starters (chips in Lite, full browser in Pro) — no AI, just ideas.
-*   **Write with AI (macOS 26+ with Apple Intelligence):** drafts a structured lyric sheet on-device via Apple's FoundationModels, with per-section guides. Hidden automatically when unsupported.
+*   **Write with AI (macOS 26+ with Apple Intelligence):** drafts a structured lyric sheet on-device via Apple's **FoundationModels** — the system model that ships with macOS as part of Apple Intelligence. **No model is downloaded for this and no network is used** — it is a different model from the song engine, which *does* download once from Hugging Face. Each section (verse / chorus / bridge / outro) is generated with its own guide so the small on-device model keeps sections distinct instead of repeating one hook. The button hides automatically on Macs without Apple Intelligence.
 *   **Help icons (❓):** each slider/switch shows a tooltip on hover and a short explainer card on click.
 *   **Samples (lyrics):** loads ready-made lyric sets, including an **Instrumental only** template.
 *   **Instrumental:** adds `instrumental, no vocals` to the prompt and keeps only the structural tags from your lyrics. In Pro, the score editor can instead rewrite the ABC directly (Vocal → Ins) — the official, most robust YuE2 recipe.
