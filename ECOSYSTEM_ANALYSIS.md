@@ -3,11 +3,11 @@
 > **Purpose:** Analysis of all 63 GitHub repos listed in `awesomeYuE README_EN.md` (everything except `arinltte/YuE2Mac` itself, which is this project). All repos were cloned temporarily into `.awesome-repos-tmp/` for analysis and have been removed afterwards.
 > **Method:** shallow clone → README/docs/source review → feature extraction mapped against YuE2Mac's feature set. Nothing was built or run.
 > **Date:** October 2025 (list header says "Last updated 2026-09-26").
-> **Status:** **Tier 1 of the roadmap shipped in v0.1.2** and was verified end-to-end (engine test + full app-path test + Release build). This document now serves as the **forward roadmap**; the deep dives in §1 are kept as implementation references for the remaining items.
+> **Status:** **Tier 1 of the roadmap shipped in v0.2.0** and was verified end-to-end (engine test + full app-path test + Release build). This document now serves as the **forward roadmap**; the deep dives in §1 are kept as implementation references for the remaining items.
 
 ---
 
-## 0. What shipped in v0.1.2 (Tier 1 complete)
+## 0. What shipped in v0.2.0 (Tier 1 complete)
 
 All nine Tier-1 items are implemented and verified:
 
@@ -96,17 +96,17 @@ Organized by theme. Each entry: **what / who does it / how it could land in YuE2
 ### A. Generation UX & workflow
 
 1. **Persistent worker process** (model loads once) — tonywestonuk, ianiv, krakenunbound, stavitian. YuE2Mac's per-song cold start wastes ~30–60 s reloading weights. A JSON-lines stdin/stdout worker keeps the current "unloaded after song" memory story optional (idle worker could self-exit after N minutes — yue2-sidecar's `POST /unload` pattern) instead of mandatory.
-2. **Song queue + batch generation** — tonywestonuk ("Songs per run"), Workbench ("queue dozens"), vrgamegirl19 "Surprise me" batch (batch size, vocal gender, style, language). *Shipped in v0.1.2: the queue UI (sequential, one render at a time).* Still open: true batched AR decode, which makes a queue of drafts dramatically cheaper than sequential runs.
-3. **Draft → full-quality render** — tonywestonuk (8-step GPU draft → 32-step ANE render reusing tokens+seed), smittyPNW ("Preview, then finish"), mlx-Yue fast mode (RTF < 1.0). *Shipped in v0.1.2: draft(8) → Finish(32) reusing the saved song project.*
-4. **Song library with metadata + persistence** — ianiv (badges, search, filters, multi-select), Whiskerwave (searchable libraries), Workbench (per-task unique IDs used as filenames). *Shipped in v0.1.2: timestamped output folders + library with search/replay/M4A/variations.* Still open: multi-select, filters, project tracks.
-5. **Variations / regenerate** — ianiv variation groups, ACE-Step "Retake" tab (same request, new seed). *Shipped in v0.1.2: "New variation" retakes from the library.* Still open: grouping retakes into families.
-6. **Cancel granularity** — ianiv: queued cancels instantly; running stops at next token/step/chunk. *Shipped in v0.1.2: instant queued-cancel, honest "Stopped" labels.* Still open: keep partial artifacts when requested.
+2. **Song queue + batch generation** — tonywestonuk ("Songs per run"), Workbench ("queue dozens"), vrgamegirl19 "Surprise me" batch (batch size, vocal gender, style, language). *Shipped in v0.2.0: the queue UI (sequential, one render at a time).* Still open: true batched AR decode, which makes a queue of drafts dramatically cheaper than sequential runs.
+3. **Draft → full-quality render** — tonywestonuk (8-step GPU draft → 32-step ANE render reusing tokens+seed), smittyPNW ("Preview, then finish"), mlx-Yue fast mode (RTF < 1.0). *Shipped in v0.2.0: draft(8) → Finish(32) reusing the saved song project.*
+4. **Song library with metadata + persistence** — ianiv (badges, search, filters, multi-select), Whiskerwave (searchable libraries), Workbench (per-task unique IDs used as filenames). *Shipped in v0.2.0: timestamped output folders + library with search/replay/M4A/variations.* Still open: multi-select, filters, project tracks.
+5. **Variations / regenerate** — ianiv variation groups, ACE-Step "Retake" tab (same request, new seed). *Shipped in v0.2.0: "New variation" retakes from the library.* Still open: grouping retakes into families.
+6. **Cancel granularity** — ianiv: queued cancels instantly; running stops at next token/step/chunk. *Shipped in v0.2.0: instant queued-cancel, honest "Stopped" labels.* Still open: keep partial artifacts when requested.
 7. **Honest interruption labels & restart recovery** — Workbench (only jobs started before this process may be called "interrupted by restart"; queue state file written atomically), ianiv (waiting jobs re-queued on start).
 8. **Long songs via chunk + crossfade** — cicalooo/ComfyUI-YuE2-LongSong: split lyrics/ABC into chunks with a shared-chorus overlap, pad bars, matching cot modes, edge-trim, 2–6 s equal-power crossfade; warns against slicing one ABC into broken halves. YuE2 hard 360 s cap becomes soft.
-9. **Export formats** — *M4A shipped in v0.1.2 (native `afconvert`).* Still open: MP3, FLAC, ZIP of the whole song folder (ianiv); nvmax saves MP3 320k / FLAC 16-24 bit.
+9. **Export formats** — *M4A shipped in v0.2.0 (native `afconvert`).* Still open: MP3, FLAC, ZIP of the whole song folder (ianiv); nvmax saves MP3 320k / FLAC 16-24 bit.
 10. **Project/album organization** — ianiv Projects: named tracks, rated takes, chosen take per track, add-from-library, plays/exports as an album.
 
-### B. The score (ABC) — editing + Vocal→Ins shipped in v0.1.2; score *input*/piano-roll still open
+### B. The score (ABC) — editing + Vocal→Ins shipped in v0.2.0; score *input*/piano-roll still open
 
 1. **Score-conditioned regeneration**: save the ABC YuE2Mac already writes, let the user edit it (or just tweak tempo/key/sections), validate, re-render. References: official editing.md; ds-yue-webui (browser editor → validate → invariant compare → regenerate); yue2_groove (**freeze baseline → edit → CHECK INVARIANTS → generation refuses to run unless the check passed on the current ABC**, `edit_manifest.json`); YuE2Fast Score Studio (section reorder/duplicate/delete with lyric blocks following, transpose, tempo, bar-length check).
 2. **Piano-roll editor** — FL-YuE2 (click to add notes, drag pitch/time/length, snap values, gaps→rests, two voices + chord lane, browser synth preview + metronome), yue2-studio-pc (`pianoroll.js`: dependency-free, narrow lossless ABC dialect, octave buttons), pytraveler (track window). A SwiftUI piano roll is a serious but high-payoff component; a staff-notation preview (abcjs-style) is the lighter alternative (ds-yue-webui).
@@ -130,20 +130,20 @@ Organized by theme. Each entry: **what / who does it / how it could land in YuE2
 
 ### D. LLM-assisted writing (lyrics, style, titles)
 
-1. **On-device writing via Apple FoundationModels** — tonywestonuk `TitleSuggester.swift`: `@Generable` struct with one `@Guide`-described field per section (verse/chorus/bridge/outro) because "guided generation keeps the small on-device model from repeating itself"; falls back gracefully when unavailable. Zero-dependency, Apple-native — **shipped in v0.1.2** (`LyricWriter.swift`).
+1. **On-device writing via Apple FoundationModels** — tonywestonuk `TitleSuggester.swift`: `@Generable` struct with one `@Guide`-described field per section (verse/chorus/bridge/outro) because "guided generation keeps the small on-device model from repeating itself"; falls back gracefully when unavailable. Zero-dependency, Apple-native — **shipped in v0.2.0** (`LyricWriter.swift`).
 2. **Writing room with a local LLM** — yue2-mlx.pinokio + Whiskerwave + vrgamegirl19 + krakenunbound: **LM Studio / Ollama / any OpenAI-compatible endpoint**; "Generate Lyrics from Idea", "Generate Style from Idea", "Expand Lyrics" (add verses/bridges), lyric preferences. tio-music-studio: Claude API with **Ollama qwen3:8b fallback** for prompt translation.
 3. **Idea → style + lyrics in one shot** — pytraveler `YuE2 Write Song`; Workbench's DeepSeek assistant producing "six-element style tags + structured lyrics"; nvmax `YuE2 LLM Co-Producer` that "formats lyrics, refines rhymes, adds vocal taxonomy, tailors concepts for YuE2".
-4. **Style preset libraries** — SongScribe: **73 presets × 14 categories**, detail levels (tags/full/rich), vocal selector, language tag, `blend_with` mixing, free-text extras; nvmax voice taxonomy with explicit range tags (`[voice: warm baritone...] [range: G2-G4]`); 200-tag list from the YuE1 era (`top_200_tags.json`). *Shipped in v0.1.2: ~40-preset categorized catalog (pure Swift).* Still open: blending, voice-range tags.
+4. **Style preset libraries** — SongScribe: **73 presets × 14 categories**, detail levels (tags/full/rich), vocal selector, language tag, `blend_with` mixing, free-text extras; nvmax voice taxonomy with explicit range tags (`[voice: warm baritone...] [range: G2-G4]`); 200-tag list from the YuE1 era (`top_200_tags.json`). *Shipped in v0.2.0: ~40-preset categorized catalog (pure Swift).* Still open: blending, voice-range tags.
 5. **Song analyzer** — SongScribe `Song Analyzer` (audio → caption + lyrics + duration); mitnits style-drafter (Audio Flamingo 3 + CLAP — heavy); simpler: use transcription + heuristics. Feeds covers ("keep the source's feel").
 6. **Lyric micro-controls** — pytraveler's finding: **mid-word capitals break the BPE merge at the stressed syllable** (`recORD` → `rec|ORD`) while ALL-CAPS does nothing — a documented, model-specific trick for stress placement.
 
 ### E. Conditioning & advanced controls
 
-1. **Sampling overrides** — ds-yue-webui (temperature / top-p / top-k / repetition penalty / window / token caps per model), FS_Audio_Suite (rep penalty 1.2 "else a memorized song may replay"; **CFG "weirdness" > 1 costs 2× time**, 1.0 = native single-pass). *Shipped in v0.1.2: the Advanced sampling card (temperature/top-p/top-k/rep penalty + reset).* Still open: window / token caps per stage.
+1. **Sampling overrides** — ds-yue-webui (temperature / top-p / top-k / repetition penalty / window / token caps per model), FS_Audio_Suite (rep penalty 1.2 "else a memorized song may replay"; **CFG "weirdness" > 1 costs 2× time**, 1.0 = native single-pass). *Shipped in v0.2.0: the Advanced sampling card (temperature/top-p/top-k/rep penalty + reset).* Still open: window / token caps per stage.
 2. **Concept sliders** — mikkel/yue2-concept-sliders: 16 voice/genre "particle" adapters (female, metal, …) applied as scaled residuals hooked on AR attention during planning only, removable before synthesis; distilled standard-LoRA versions; scale slider with 0.5 interpolation. A "voice character" slider row in YuE2Mac's UI mapped to adapter files.
 3. **LoRA adapter support** — ianiv (hot-reload folder, AR vs NAR kinds, strengths), ScryptHunter (stacking with independent AR/NAR strengths, LoKr, universal loader incl. FL/Starnodes/PEFT/HOT-Step/Mothersuperior formats), pytraveler (`YuE2 LoRA` + the 279 MB **instrumental LoRA**). Mothersuperior publishes: instrumental AR LoRA, realaudio NAR LoRA, hum adapters.
 4. **Style/Artist LoRA training** — Starnodes2024 trainer (audio → VAE latents cached once; **NAR-only** flow-matching LoRA with `[Tags] trigger, caption` prefix; *style/timbre, not voice clone*; AR branch frozen); FS_Audio_Suite Artist Trainer (planner + decoder in one loop, KL trust region vs base model, chunked+checkpointed logits so whole songs fit, EMA, "pick rungs by ear, not by held-out CE"); vrgamegirl19 (playlist→dataset builder); YuE2gen-studio **identities** (a folder of one singer's songs → auto-separated vocals, key/tempo measured, lyrics drafted with Gemma's audio encoder, trigger-word captions exported).
-5. **Robust instrumental mode** — official skill: keep the generated ABC, move `Vocal` notes to `Ins`, re-render. *Shipped in v0.1.2: the Pro score editor's Vocal→Ins rewrite; prompt injection remains the Lite fallback.* (YuE2UI even ships *baked instrumental-only* models.)
+5. **Robust instrumental mode** — official skill: keep the generated ABC, move `Vocal` notes to `Ins`, re-render. *Shipped in v0.2.0: the Pro score editor's Vocal→Ins rewrite; prompt injection remains the Lite fallback.* (YuE2UI even ships *baked instrumental-only* models.)
 
 ### F. Apple-Silicon performance & memory (beyond current MLX usage)
 
@@ -199,7 +199,7 @@ Everything else in the list contributed at least one concrete idea and is cited 
 
 ## 4. Roadmap for YuE2Mac
 
-**Tier 1 — ✅ SHIPPED in v0.1.2** (all nine items; verified — see §0 for what landed):
+**Tier 1 — ✅ SHIPPED in v0.2.0** (all nine items; verified — see §0 for what landed):
 output management + song library · queue with stage chips + honest stop states · saved
 artifacts (song project, score, sidecar) · ABC edit → validate → re-render (+ Vocal→Ins) ·
 draft(8) → finish(32) reusing the saved take · style preset catalog · advanced sampling ·
@@ -213,7 +213,7 @@ SongScribe, ds-yue-webui, FS_Audio_Suite.
 12. Piano-roll score editor + syllable fit checker. *(FL-YuE2, mitnits)*
 13. Karaoke **LRC/eLRC** export + word-highlight playback. *(Workbench)*
 14. Long songs via chunked crossfade. *(cicalooo)*
-15. **Variation families** (grouping retakes) + projects/albums. *(ianiv; retakes themselves shipped in v0.1.2)*
+15. **Variation families** (grouping retakes) + projects/albums. *(ianiv; retakes themselves shipped in v0.2.0)*
 16. Local-LLM **writing room** (LM Studio/Ollama/OpenAI-compatible). *(pinokio, Whiskerwave, vrgamegirl19)*
 
 **Tier 3 — ambitious differentiators:**

@@ -14,6 +14,9 @@ struct LiteModeView: View {
     @Bindable private var settings = SettingsStore.shared
     @State private var selectedVibe: String?
 
+    /// The canvas/controls split; draggable, persisted per mode.
+    @State private var sidebarFraction = SettingsStore.shared.liteSidebarFraction
+
     private var theme: AppTheme { settings.theme }
 
     private var canGenerate: Bool {
@@ -27,6 +30,7 @@ struct LiteModeView: View {
 
     var body: some View {
         GeometryReader { g in
+            let usable = max(0, g.size.width - 14)   // 14pt = the split divider
             HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 14) {
                     header
@@ -36,9 +40,12 @@ struct LiteModeView: View {
                         .frame(maxHeight: 190)
                 }
                 .padding(20)
-                .frame(width: g.size.width * 0.64, height: g.size.height)
+                .frame(width: usable * (1 - sidebarFraction), height: g.size.height)
 
-                Divider().opacity(0.6)
+                SplitDivider(totalWidth: g.size.width,
+                             defaultFraction: 0.36,
+                             fraction: $sidebarFraction,
+                             onCommit: { settings.liteSidebarFraction = sidebarFraction })
 
                 VStack(alignment: .leading, spacing: 12) {
                     generateCard
@@ -47,7 +54,7 @@ struct LiteModeView: View {
                     Spacer()
                 }
                 .padding(16)
-                .frame(width: g.size.width * 0.36, height: g.size.height)
+                .frame(width: usable * sidebarFraction, height: g.size.height)
             }
         }
     }

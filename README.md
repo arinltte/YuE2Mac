@@ -8,6 +8,7 @@
     <a href="https://github.com/arinltte/YuE2Mac/blob/main/LICENSE.txt"><img src="https://img.shields.io/github/license/arinltte/YuE2Mac?style=flat-square&color=green" alt="License" /></a>
     <img src="https://img.shields.io/badge/macOS-14.0%2B-blue?style=flat-square" alt="macOS" />
     <img src="https://img.shields.io/badge/100%25-Offline-brightgreen?style=flat-square" alt="Offline" />
+    <a href="https://github.com/RevolutionLA/awesome-YuE"><img src="https://img.shields.io/badge/awesome--YuE-listed-9b59b6?style=flat-square" alt="Listed in awesome-YuE" /></a>
   </p>
 </p>
 
@@ -23,9 +24,11 @@ Powered by YuE2 (a Mixture-of-Transformers model) running at 8-bit on the Apple 
 
 > **Original models & research:** [YuE project page](https://map-yue2.github.io) · [YuE on GitHub](https://github.com/multimodal-art-projection/YuE) · [MERT](https://arxiv.org/abs/2306.00107)
 
-## 🆕 What's new in v0.1.2
+Listed in [awesome-YuE](https://github.com/RevolutionLA/awesome-YuE) — the curated directory of the YuE / YuE2 ecosystem.
 
-The whole studio was rebuilt around two modes, and the Tier-1 ideas from the [ecosystem analysis](./ECOSYSTEM_ANALYSIS.md) landed:
+## 🆕 What's new in v0.2.0
+
+The whole studio was rebuilt around two modes, and every Tier-1 idea from the [ecosystem analysis](./ECOSYSTEM_ANALYSIS.md) landed, plus a layout polish pass:
 
 *   **Two modes** — *Lite* (two steps and a big button) and *Pro* (the full studio), switched from the toolbar; your work follows you between modes.
 *   **Queue** — line up as many songs as you like; one renders at a time, with live stage chips (Load → Plan → Compose → Refine → Render → Save) and a tokens/s readout.
@@ -36,6 +39,8 @@ The whole studio was rebuilt around two modes, and the Tier-1 ideas from the [ec
 *   **Write with AI** — on-device lyric drafting via Apple FoundationModels on Apple-Intelligence Macs (macOS 26+). Nothing downloads, nothing leaves your Mac.
 *   **Style catalog** — ~40 categorized style starters, chips in Lite and a browser in Pro, plus “Surprise me”.
 *   **Help everywhere** — every control explains itself: hover the ❓ for a tooltip, click it for a short card.
+*   **Resizable split** — drag the divider between the writing canvas and the controls column; each mode remembers your width, double-click resets it.
+*   **Tidier chrome** — the Lite/Pro switch sits on the left of the toolbar, everything else (library, appearance, about, settings) on the right; appearance now lives only in the toolbar.
 
 ## ✨ Top Features
 

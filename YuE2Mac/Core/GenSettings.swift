@@ -84,6 +84,23 @@ final class SettingsStore {
         didSet { defaults.set(draftPreview, forKey: "draftPreview") }
     }
 
+    // Draggable column split (LITE & PRO): the fraction of the window width
+    // that the right-hand controls column occupies. Persisted per mode; a
+    // fresh install (no stored value) falls back to each mode's default.
+    var liteSidebarFraction: Double {
+        didSet { defaults.set(liteSidebarFraction, forKey: "liteSidebarFraction") }
+    }
+    var proSidebarFraction: Double {
+        didSet { defaults.set(proSidebarFraction, forKey: "proSidebarFraction") }
+    }
+
+    /// Keep the split inside a band where both columns stay usable, whatever
+    /// the window width or whatever was stored. Never returns NaN/infinite.
+    static func clampSplit(_ f: Double, fallback: Double = 0.40) -> Double {
+        guard f.isFinite else { return fallback }
+        return min(0.60, max(0.25, f))
+    }
+
     // Advanced sampling overrides (Pro mode).
     var temperature: Double {
         didSet { defaults.set(temperature, forKey: "temperature") }
@@ -124,6 +141,10 @@ final class SettingsStore {
         seed = defaults.string(forKey: "seed") ?? ""
         instrumental = defaults.bool(forKey: "instrumental")
         draftPreview = defaults.bool(forKey: "draftPreview")
+        liteSidebarFraction = Self.clampSplit(
+            (defaults.object(forKey: "liteSidebarFraction") as? Double) ?? 0.36, fallback: 0.36)
+        proSidebarFraction = Self.clampSplit(
+            (defaults.object(forKey: "proSidebarFraction") as? Double) ?? 0.40, fallback: 0.40)
 
         let t = SamplingOverrides.engineDefaults
         temperature = defaults.object(forKey: "temperature") == nil ? t.temperature : defaults.double(forKey: "temperature")

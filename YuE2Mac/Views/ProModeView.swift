@@ -15,6 +15,9 @@ struct ProModeView: View {
     @Bindable private var settings = SettingsStore.shared
     @State private var showAdvanced = false
 
+    /// The canvas/controls split; draggable, persisted per mode.
+    @State private var sidebarFraction = SettingsStore.shared.proSidebarFraction
+
     private var theme: AppTheme { settings.theme }
 
     private var modelOptions: [String] {
@@ -29,6 +32,7 @@ struct ProModeView: View {
 
     var body: some View {
         GeometryReader { g in
+            let usable = max(0, g.size.width - 14)   // 14pt = the split divider
             HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 14) {
                     header
@@ -37,9 +41,12 @@ struct ProModeView: View {
                         .frame(maxHeight: 200)
                 }
                 .padding(20)
-                .frame(width: g.size.width * 0.60, height: g.size.height)
+                .frame(width: usable * (1 - sidebarFraction), height: g.size.height)
 
-                Divider().opacity(0.6)
+                SplitDivider(totalWidth: g.size.width,
+                             defaultFraction: 0.40,
+                             fraction: $sidebarFraction,
+                             onCommit: { settings.proSidebarFraction = sidebarFraction })
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
@@ -53,7 +60,7 @@ struct ProModeView: View {
                     }
                     .padding(16)
                 }
-                .frame(width: g.size.width * 0.40, height: g.size.height)
+                .frame(width: usable * sidebarFraction, height: g.size.height)
             }
         }
     }

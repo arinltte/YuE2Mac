@@ -1,5 +1,6 @@
 //
-//  SettingsSheet.swift — engine diagnostic, model variant, appearance.
+//  SettingsSheet.swift — engine diagnostic + model variant. Appearance
+//  lives in the toolbar's paint-palette menu, not here.
 //
 
 import SwiftUI
@@ -46,16 +47,6 @@ struct SettingsSheet: View {
                         textRow("In use", model)
                     }
                 }
-            }
-
-            GroupBox(label: Label("Appearance", systemImage: "paintpalette")) {
-                Picker("Theme", selection: Binding(
-                    get: { settings.theme },
-                    set: { settings.theme = $0 }
-                )) {
-                    ForEach(AppTheme.allCases) { t in Text(t.displayName).tag(t) }
-                }
-                .labelsHidden()
             }
 
             if setup.state == .failed, let msg = setup.errorMessage {

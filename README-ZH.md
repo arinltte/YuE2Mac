@@ -8,6 +8,7 @@
     <a href="https://github.com/arinltte/YuE2Mac/blob/main/LICENSE.txt"><img src="https://img.shields.io/github/license/arinltte/YuE2Mac?style=flat-square&color=green" alt="许可证" /></a>
     <img src="https://img.shields.io/badge/macOS-14.0%2B-blue?style=flat-square" alt="macOS" />
     <img src="https://img.shields.io/badge/100%25-本地离线-brightgreen?style=flat-square" alt="离线" />
+    <a href="https://github.com/RevolutionLA/awesome-YuE"><img src="https://img.shields.io/badge/awesome--YuE-listed-9b59b6?style=flat-square" alt="收录于 awesome-YuE" /></a>
   </p>
 </p>
 
@@ -23,9 +24,11 @@ YuE2Mac 是一款原生 macOS 桌面应用，把开源 [**YuE2**](https://github
 
 > **原始模型与研究：** [YuE 项目主页](https://map-yue2.github.io) · [YuE GitHub](https://github.com/multimodal-art-projection/YuE) · [MERT](https://arxiv.org/abs/2306.00107)
 
-## 🆕 v0.1.2 新增内容
+收录于 [awesome-YuE](https://github.com/RevolutionLA/awesome-YuE) —— YuE / YuE2 生态项目精选目录。
 
-整个工坊围绕两种模式重构，并落地了[生态分析](./ECOSYSTEM_ANALYSIS.md)中的 Tier-1 特性：
+## 🆕 v0.2.0 新增内容
+
+整个工坊围绕两种模式重构，落地了[生态分析](./ECOSYSTEM_ANALYSIS.md)中的全部 Tier-1 特性，并做了一轮界面打磨：
 
 *   **两种模式** —— *Lite*（两步操作 + 一个大按钮）与 *Pro*（完整录音棚），工具栏一键切换；你的内容在两种模式间无缝保留。
 *   **队列** —— 想排多少首就排多少首；同一时间只渲染一首，并带有实时阶段芯片（Load → Plan → Compose → Refine → Render → Save）与 tokens/s 速度显示。
@@ -36,6 +39,8 @@ YuE2Mac 是一款原生 macOS 桌面应用，把开源 [**YuE2**](https://github
 *   **AI 写词** —— 在支持 Apple Intelligence 的 Mac（macOS 26+）上通过 Apple FoundationModels 在本地起草歌词。不下载模型、不联网。
 *   **风格目录** —— 约 40 个分类风格起始（Lite 芯片 / Pro 浏览器），外加“给我惊喜”。
 *   **处处有说明** —— 每个控件都会自我解释：悬停 ❓ 显示提示，点击弹出说明卡片。
+*   **可拖拽分栏** —— 拖动写作区与控制栏之间的分隔线即可调整布局；每种模式都会记住你的宽度，双击复位。
+*   **更清爽的界面** —— Lite/Pro 开关固定在工具栏左侧，其余按钮（歌曲库、外观、关于、设置）靠右；外观设置只保留在工具栏。
 
 ## ✨ 主要特性
 

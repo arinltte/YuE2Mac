@@ -148,6 +148,59 @@ struct StageChips: View {
     }
 }
 
+// MARK: - Resizable split
+
+/// A draggable vertical line between the writing canvas and the controls
+/// column. The bound fraction updates live during the drag (smooth resize)
+/// and is committed once on release, so persistence sees a single write.
+/// Double-click snaps back to the mode's default split.
+struct SplitDivider: View {
+    /// Full width of the area being split (for drag-distance → fraction math).
+    let totalWidth: CGFloat
+    /// The mode's default fraction — used by the double-click reset.
+    var defaultFraction: Double
+    @Binding var fraction: Double
+    /// Called once, when the drag ends (or after a double-click reset).
+    var onCommit: () -> Void
+
+    @State private var hovering = false
+    @State private var dragging = false
+    @State private var dragStart: Double?
+
+    var body: some View {
+        Capsule()
+            .fill(hovering || dragging
+                  ? Color.white.opacity(0.45)
+                  : Color.white.opacity(0.14))
+            .frame(width: 2)
+            .frame(maxHeight: .infinity)
+            .frame(width: 14)   // generous, mostly invisible hit area
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        dragging = true
+                        let start = dragStart ?? fraction
+                        dragStart = start
+                        guard totalWidth > 0 else { return }
+                        let delta = Double(value.translation.width / totalWidth)
+                        fraction = SettingsStore.clampSplit(start - delta, fallback: defaultFraction)
+                    }
+                    .onEnded { _ in
+                        dragging = false
+                        dragStart = nil
+                        onCommit()
+                    }
+            )
+            .onTapGesture(count: 2) {
+                fraction = defaultFraction
+                onCommit()
+            }
+            .help("Drag to resize the columns. Double-click to reset.")
+    }
+}
+
 // MARK: - Small badges
 
 struct ChipBadge: View {

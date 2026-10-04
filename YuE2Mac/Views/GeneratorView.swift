@@ -44,8 +44,11 @@ struct GeneratorView: View {
         }
         .frame(minWidth: 1000, minHeight: 680)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
+            // Mode switch stays leading; every other control trails.
+            ToolbarItem(placement: .navigation) {
                 modeToggle
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button { showLibrary.toggle() } label: { Image(systemName: "record.circle") }
                     .help("Your song library")
                 themeMenu
