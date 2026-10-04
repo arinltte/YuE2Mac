@@ -70,13 +70,18 @@ struct CardContainer<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(fillColor ?? Color(red: 0.09, green: 0.09, blue: 0.10))
+        // Size from the content itself: a bare shape has no intrinsic size, so
+        // inside a ScrollView (nil height proposal) every card would collapse
+        // to ~10pt and its overlay content would spill over neighbouring cards.
+        content()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(fillColor ?? Color(red: 0.09, green: 0.09, blue: 0.10))
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(theme.isTrueDark ? Color.white.opacity(0.08) : Color.white.opacity(0.08), lineWidth: 1)
             )
-            .overlay(content())
     }
 }
 

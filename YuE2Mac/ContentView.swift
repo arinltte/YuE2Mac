@@ -17,7 +17,7 @@ struct ContentView: View {
                 GeneratorView(setup: setup, engine: engine)
             }
         }
-        .frame(minWidth: 900, minHeight: 640)
+        .frame(minWidth: 1000, minHeight: 680)
     }
 }
 
