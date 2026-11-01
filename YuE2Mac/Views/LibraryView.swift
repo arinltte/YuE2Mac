@@ -25,6 +25,9 @@ struct LibraryView: View {
     @State private var filter: RatingFilter = .all
     @State private var editingSong: LibrarySong?
     @State private var confirmingDelete: LibrarySong?
+    /// IDs of the songs selected for bulk actions (checkboxes / Select All).
+    @State private var selectedIDs: Set<String> = []
+    @State private var confirmingBulkDelete = false
     @State private var statusNote: String?
     @State private var showPlaylist = false
     @ObservedObject private var playlist = PlaylistManager.shared
@@ -74,7 +77,8 @@ struct LibraryView: View {
                 Button("Done") { onClose() }
             }
 
-            // Rating filter buttons.
+            // Rating filter buttons + select-all (operates on what's visible,
+            // so e.g. "Disliked" + Select All selects exactly the disliked songs).
             HStack(spacing: 8) {
                 ForEach(RatingFilter.allCases, id: \.self) { f in
                     let isActive = filter == f
@@ -85,10 +89,48 @@ struct LibraryView: View {
                     .controlSize(.small)
                     .tint(isActive ? theme.accentColor : nil)
                 }
+                Spacer()
+                let visibleIDs = Set(filtered.map(\.id))
+                let allVisibleSelected = !visibleIDs.isEmpty && visibleIDs.isSubset(of: selectedIDs)
+                Button(allVisibleSelected ? "Deselect All" : "Select All") {
+                    if allVisibleSelected {
+                        selectedIDs.removeAll()
+                    } else {
+                        selectedIDs.formUnion(visibleIDs)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(filtered.isEmpty)
+                .help(allVisibleSelected ? "Clear the selection"
+                                         : "Select every song shown by the current filter and search")
             }
 
             TextField("Search titles, styles, lyrics…", text: $query)
                 .textFieldStyle(.roundedBorder)
+
+            // Bulk actions for the current selection.
+            if !selectedIDs.isEmpty {
+                HStack(spacing: 8) {
+                    Text("\(selectedIDs.count) selected")
+                        .font(.system(.caption, weight: .semibold))
+                    Button {
+                        bulkAddToPlaylist()
+                    } label: {
+                        Label("Add to Playlist", systemImage: "plus.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Button(role: .destructive) {
+                        confirmingBulkDelete = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    Spacer()
+                }
+            }
 
             if filtered.isEmpty {
                 emptyState
@@ -97,6 +139,8 @@ struct LibraryView: View {
                     VStack(spacing: 8) {
                         ForEach(filtered) { song in
                             LibraryRow(engine: engine, song: song, theme: theme,
+                                       isSelected: selectedIDs.contains(song.id),
+                                       onToggleSelect: { toggleSelection(song) },
                                        onEdit: { editingSong = song },
                                        onDelete: { confirmingDelete = song },
                                        onNote: { statusNote = $0 },
@@ -210,6 +254,8 @@ struct LibraryView: View {
             Button("Delete song", role: .destructive) {
                 if let song = confirmingDelete {
                     SongLibrary.delete(song)
+                    playlist.remove(song.wav)   // don't leave a dead entry in the queue
+                    selectedIDs.remove(song.id)
                     confirmingDelete = nil
                     refresh()
                 }
@@ -217,6 +263,16 @@ struct LibraryView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("The song folder (audio, score, saved take) moves to the Trash.")
+        }
+        .confirmationDialog(
+            "Delete \(selectedIDs.count) songs?",
+            isPresented: $confirmingBulkDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete songs", role: .destructive) { deleteSelected() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The song folders (audio, score, saved takes) move to the Trash.")
         }
     }
 
@@ -233,6 +289,57 @@ struct LibraryView: View {
 
     private func refresh() {
         songs = SongLibrary.scan()
+        // Drop selection entries for songs that no longer exist.
+        selectedIDs.formIntersection(Set(songs.map(\.id)))
+    }
+
+    // MARK: - Bulk selection actions
+
+    @MainActor
+    private func toggleSelection(_ song: LibrarySong) {
+        if selectedIDs.contains(song.id) {
+            selectedIDs.remove(song.id)
+        } else {
+            selectedIDs.insert(song.id)
+        }
+    }
+
+    /// The selected songs, in library order (newest first).
+    private var selectedSongs: [LibrarySong] {
+        songs.filter { selectedIDs.contains($0.id) }
+    }
+
+    @MainActor
+    private func bulkAddToPlaylist() {
+        let targets = selectedSongs
+        guard !targets.isEmpty else { return }
+        var added = 0
+        var already = 0
+        for song in targets {
+            if playlist.tracks.contains(song.wav) {
+                already += 1
+            } else {
+                playlist.add(song.wav)
+                added += 1
+            }
+        }
+        statusNote = already > 0
+            ? "Added \(added) to playlist (\(already) already there)"
+            : "Added \(targets.count) song\(targets.count == 1 ? "" : "s") to playlist"
+    }
+
+    @MainActor
+    private func deleteSelected() {
+        let targets = selectedSongs
+        guard !targets.isEmpty else { return }
+        for song in targets {
+            SongLibrary.delete(song)
+            playlist.remove(song.wav)   // don't leave dead entries in the queue
+        }
+        selectedIDs.subtract(targets.map(\.id))
+        confirmingBulkDelete = false
+        statusNote = "Deleted \(targets.count) song\(targets.count == 1 ? "" : "s")"
+        refresh()
     }
 }
 
@@ -242,6 +349,8 @@ private struct LibraryRow: View {
     @Bindable var engine: GenerationEngine
     let song: LibrarySong
     let theme: AppTheme
+    let isSelected: Bool
+    var onToggleSelect: () -> Void
     var onEdit: () -> Void
     var onDelete: () -> Void
     var onNote: (String) -> Void
@@ -252,6 +361,13 @@ private struct LibraryRow: View {
     var body: some View {
         CardContainer(theme: theme) {
             HStack(alignment: .center, spacing: 12) {
+                Toggle(isOn: Binding(get: { isSelected }, set: { _ in onToggleSelect() })) {
+                    EmptyView()
+                }
+                .toggleStyle(.checkbox)
+                .help("Select for bulk actions")
+                .accessibilityLabel("Select \(song.title)")
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(song.title).font(.system(.body, weight: .semibold)).lineLimit(1)
@@ -304,7 +420,13 @@ private struct LibraryRow: View {
                         if let abc = song.abcURL {
                             Divider()
                             Button {
-                                NSWorkspace.shared.openFile(abc.path, withApplication: "TextEdit")
+                                // openFile(_:withApplication:) is deprecated (macOS 11+).
+                                if let textEdit = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.TextEdit") {
+                                    let config = NSWorkspace.OpenConfiguration()
+                                    NSWorkspace.shared.open([abc], withApplicationAt: textEdit, configuration: config) { _, _ in }
+                                } else {
+                                    NSWorkspace.shared.open(abc)
+                                }
                             } label: {
                                 Label("Open ABC file", systemImage: "doc.plaintext")
                             }
