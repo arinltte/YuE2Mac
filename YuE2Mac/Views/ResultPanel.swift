@@ -108,14 +108,11 @@ struct ResultPanel: View {
         }
     }
 
-    /// Estimate time remaining based on elapsed time and progress.
+    /// Estimate time remaining via the engine's phase-cost model: live-measured
+    /// rates where available (tok/s, step rate), calibrated budgets otherwise.
     private func estimatedTimeRemaining(for job: GenerationEngine.Job) -> String? {
-        guard let started = job.startedAt, let progress = job.progress, progress > 0.05 else { return nil }
-        let elapsed = Date().timeIntervalSince(started)
-        // Avoid division by very small progress values (unreliable early on).
-        guard progress < 0.98 else { return "almost done" }
-        let estimatedTotal = elapsed / progress
-        let remaining = max(0, estimatedTotal - elapsed)
+        if (job.progress ?? 0) >= 0.98 { return "almost done" }
+        guard let remaining = engine.estimatedTimeRemaining(for: job), remaining > 5 else { return nil }
         if remaining > 3600 {
             return String(format: "%d min", Int(remaining) / 60)
         } else if remaining > 120 {

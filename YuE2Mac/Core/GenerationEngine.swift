@@ -63,6 +63,15 @@ final class GenerationEngine {
         var startedAt: Date?
         var finishedAt: Date?
 
+        // Phase timing for ETA estimation (populated in parse()).
+        var phaseStartedAt: Date?
+        var planTokens: Int?          // ABC-score tokens generated (planning)
+        var planTokRate: Double?      // measured tok/s during planning
+        var semanticTokens: Int?      // melodic tokens generated so far
+        var semanticTokRate: Double?  // measured tok/s during melodic generation
+        var narStep: Int?             // current refinement step index
+        var narAudioSec: Double?      // rendered audio length from the [nar] header
+
         var wavURL: URL { folder.appendingPathComponent(wavName) }
         var isRunning: Bool { state == .running }
     }
@@ -247,6 +256,99 @@ final class GenerationEngine {
         jobs.removeAll { $0.state != .running && $0.state != .queued }
     }
 
+    // MARK: Time estimation
+
+    /// Per-phase cost model for ETA. Defaults are reasonable starting points
+    /// (Apple Silicon, ~3-minute song); live-measured rates override the
+    /// fallbacks once a phase is underway.
+    struct PhaseBudget {
+        var load: Double = 20                 // model load (s) — black box
+        var plan: [String: Double] = ["off": 0, "melody": 12, "full": 30]
+        var semanticTokRate: Double = 50      // fallback melodic tok/s
+        var narPerStep: Double = 4            // s per refinement step at reference length
+        var vaeBase: Double = 5               // VAE decode overhead (s)
+        var vaePerSec: Double = 0.25          // VAE decode per second of audio
+        var writing: Double = 2               // WAV write + finalise (s)
+
+        /// Audio length the per-step NAR cost is calibrated against.
+        static let referenceAudioSec = 180.0
+    }
+
+    static let phaseBudget = PhaseBudget()
+
+    /// Estimated seconds remaining for a running job, or nil if unknown.
+    ///
+    /// Sums the expected cost of each pipeline phase in order. The current
+    /// phase is refined with live-measured rates (tok/s, step rate) where the
+    /// engine reports them; phases not yet reached use the calibrated budget.
+    /// This replaces a linear `elapsed / progress` extrapolation, which assumed
+    /// every progress band costs equal time — it doesn't (32-step NAR dwarfs
+    /// model load, and 8-step drafts finish far sooner).
+    func estimatedTimeRemaining(for job: Job, now: Date = Date()) -> Double? {
+        guard job.state == .running else { return nil }
+        let b = Self.phaseBudget
+
+        // Audio length: measured from the [nar] header, else estimated from
+        // tokens (~1920 samples per codec frame at 48 kHz ≈ 0.04 s/frame).
+        let audioSec = job.narAudioSec ?? Double(job.maxTokens) * 0.04
+
+        // Pipeline order depends on config: planning only happens for
+        // cot=melody/full without an external score.
+        var phases: [Phase] = [.loading]
+        if job.cot != "off" && job.abcPath == nil { phases.append(.planning) }
+        phases += [.ar, .nar, .decoding, .writing]
+
+        let currentIdx = phases.firstIndex(of: job.phase) ?? 0
+        let phaseStart = job.phaseStartedAt ?? job.startedAt ?? now
+
+        var remaining = 0.0
+        for (i, phase) in phases.enumerated() {
+            guard i >= currentIdx else { continue }   // already passed
+            let elapsed = (i == currentIdx) ? max(0, now.timeIntervalSince(phaseStart)) : 0
+
+            switch phase {
+            case .loading:
+                // Black box: budget minus elapsed (self-corrects if load is fast).
+                remaining += max(0, b.load - elapsed)
+
+            case .planning:
+                // Black box (the model decides the score length): budget minus elapsed.
+                remaining += max(0, (b.plan[job.cot] ?? 15) - elapsed)
+
+            case .ar:
+                if let toks = job.semanticTokens, let rate = job.semanticTokRate, rate > 0 {
+                    remaining += max(0, Double(job.maxTokens - toks) / rate)
+                } else {
+                    remaining += max(0, Double(job.maxTokens) / b.semanticTokRate - elapsed)
+                }
+
+            case .nar:
+                let perStep = b.narPerStep * (audioSec / PhaseBudget.referenceAudioSec)
+                if let step = job.narStep, step > 0, elapsed > 1 {
+                    // Live rate: steps completed so far this phase. (Drafts get
+                    // no live updates — the engine logs every 8th step only.)
+                    let stepRate = Double(step) / elapsed
+                    remaining += max(0, Double(job.steps - step) / stepRate)
+                } else {
+                    remaining += perStep * Double(job.steps - (job.narStep ?? 0))
+                }
+
+            case .decoding:
+                remaining += max(0, b.vaeBase + b.vaePerSec * audioSec - elapsed)
+
+            case .writing:
+                remaining += max(0, b.writing - elapsed)
+
+            default:
+                break   // idle/finished/etc. — not reachable for a running job
+            }
+        }
+
+        guard remaining.isFinite else { return nil }
+        // Safety valve: a bad rate measurement shouldn't produce absurd ETAs.
+        return min(remaining, 6 * 3600)
+    }
+
     // MARK: Runner
 
     private func runNextIfNeeded() {
@@ -299,6 +401,7 @@ final class GenerationEngine {
         job.detail = "Loading the model…"
         job.logText = "» python \(script.lastPathComponent) \(args.map { $0.contains(" ") ? "\"\($0)\"" : $0 }.joined(separator: " "))\n"
         job.startedAt = Date()
+        job.phaseStartedAt = Date()
         jobs[idx] = job
         runningJobID = job.id
 
@@ -376,43 +479,73 @@ final class GenerationEngine {
 
     // MARK: Parsing (stderr protocol from generate.py / yue2_pro.py)
 
+    private func setPhase(_ phase: Phase, at idx: Int) {
+        jobs[idx].phase = phase
+        jobs[idx].phaseStartedAt = Date()
+    }
+
     private func parse(line raw: String) {
         let line = raw.trimmingCharacters(in: .whitespaces)
         guard !line.isEmpty, let id = runningJobID, let idx = index(id) else { return }
 
         if line.hasPrefix("[load]") {
-            jobs[idx].phase = .loading
+            setPhase(.loading, at: idx)
             jobs[idx].progress = 0.05
         } else if line.hasPrefix("[plan]") {
-            jobs[idx].phase = .planning
+            setPhase(.planning, at: idx)
             jobs[idx].progress = 0.08
+        } else if line.hasPrefix("[abc]") {
+            // "[abc] 400 tokens, 32.5 tok/s" — planning (ABC score) progress.
+            setPhase(.planning, at: idx)
+            if let m = firstMatch(#"\[abc\] (\d+) tokens"#, in: line),
+               let toks = Int(m[1] ?? "") {
+                jobs[idx].planTokens = toks
+                if let r = firstMatch(#"([\d.]+) tok/s"#, in: line),
+                   let rate = Double(r[1] ?? "") {
+                    jobs[idx].planTokRate = rate
+                }
+            }
         } else if line.hasPrefix("[semantic] prefix") {
-            jobs[idx].phase = .ar
+            setPhase(.ar, at: idx)
             jobs[idx].progress = 0.10
             jobs[idx].detail = "Setting up CFG…"
         } else if line.hasPrefix("[semantic]") {
-            jobs[idx].phase = .ar
-            // "[semantic] 200 tokens, 12.5 tok/s"
-            if let m = firstMatch(#"\[semantic\] (\d+) tokens, (.*)"#, in: line),
+            setPhase(.ar, at: idx)
+            // "[semantic] 200 tokens, 12.5 tok/s" (every 200 tokens)
+            if let m = firstMatch(#"\[semantic\] (\d+) tokens"#, in: line),
                let tokens = Int(m[1] ?? "") {
+                jobs[idx].semanticTokens = tokens
+                if let r = firstMatch(#"([\d.]+) tok/s"#, in: line),
+                   let rate = Double(r[1] ?? "") {
+                    jobs[idx].semanticTokRate = rate
+                }
                 let maxTokens = jobs[idx].maxTokens
                 let frac = maxTokens > 0 ? Double(tokens) / Double(maxTokens) : 0
                 jobs[idx].progress = 0.10 + min(0.35, frac * 0.35)
-                jobs[idx].detail = "\(tokens) melodic tokens · \(m[2] ?? "")"
+                if let rate = jobs[idx].semanticTokRate {
+                    jobs[idx].detail = String(format: "%d melodic tokens · %.1f tok/s", tokens, rate)
+                } else {
+                    jobs[idx].detail = "\(tokens) melodic tokens"
+                }
             }
         } else if line.hasPrefix("[nar]") {
-            jobs[idx].phase = .nar
-            if let m = firstMatch(#"\[nar\] step (\d+)/(\d+)"#, in: line),
+            setPhase(.nar, at: idx)
+            // Header: "[nar] 1234 frames (57.4s), 32 midpoint steps"
+            if let m = firstMatch(#"\[nar\] \d+ frames \(([\d.]+)s\)"#, in: line),
+               let sec = Double(m[1] ?? "") {
+                jobs[idx].narAudioSec = sec
+            } else if let m = firstMatch(#"\[nar\] step (\d+)/(\d+)"#, in: line),
                let step = Int(m[1] ?? ""), let total = Int(m[2] ?? ""), total > 0 {
+                jobs[idx].narStep = step
                 jobs[idx].progress = 0.45 + 0.45 * (Double(step) / Double(total))
                 jobs[idx].detail = "\(step) of \(total) refinement steps"
             }
         } else if line.hasPrefix("[vae]") {
-            jobs[idx].phase = .decoding
+            setPhase(.decoding, at: idx)
             jobs[idx].progress = 0.92
             jobs[idx].detail = "Rendering the audio…"
         } else if line.hasPrefix("[done]") {
-            jobs[idx].phase = .writing
+            setPhase(.writing, at: idx)
             jobs[idx].progress = 0.98
         } else if line.hasPrefix("[error]") {
             jobs[idx].errorMessage = String(line.dropFirst("[error] ".count))
