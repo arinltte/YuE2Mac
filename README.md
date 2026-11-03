@@ -26,6 +26,20 @@ Powered by YuE2 (a Mixture-of-Transformers model) running at 8-bit on the Apple 
 
 Listed in [awesome-YuE](https://github.com/RevolutionLA/awesome-YuE) — the curated directory of the YuE / YuE2 ecosystem.
 
+## 🆕 What's new in v0.3.0
+
+The studio grew a proper listening workflow — playlist, ratings and bulk actions in the library — plus smarter filenames, a system appearance mode, and an honest time-remaining estimate:
+
+*   **Playlist** — add songs to a playlist and they play one after another; double-click any row to start from that track, with prev / play-pause / next controls below the queue.
+*   **Like / dislike** — rate songs from the library and filter by rating; ratings are remembered, including for your older songs.
+*   **Library multi-select** — tick several songs (or hit Select All, which respects your rating filter and search) to add them all to the playlist or delete them in one action.
+*   **Smarter filenames** — generated files are named after the song (your title), not a timestamp, in every job kind.
+*   **System appearance** — a new *System* palette option follows your macOS light/dark setting with standard system colors; the custom themes stay dark.
+*   **Honest time remaining** — the ETA now uses a per-phase cost model driven by your token allocation, refinement steps (8 draft vs 32 full) and planning choice — instead of a linear guess that treated every progress band as equal.
+*   **Choose where songs are saved** — a save-location setting in the configuration dialog.
+*   **Under the hood** — a central playback coordinator (cleaner audio handling), an ABC-open fix, general bug fixes, and a one-command local build script.
+
+
 ## 🆕 What's new in v0.2.0
 
 The whole studio was rebuilt around two modes, and every Tier-1 idea from the [ecosystem analysis](./ECOSYSTEM_ANALYSIS.md) landed, plus a layout polish pass:
