@@ -19,24 +19,6 @@
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>MacOS/YuE2Mac.debug.dylib</key>
-		<dict>
-			<key>cdhash</key>
-			<data>
-			CA0JvKY0WtUVQdV6jMZ1465IZ+g=
-			</data>
-			<key>requirement</key>
-			<string>cdhash H"080d09bca6345ad51541d57a8cc675e3ae4867e8"</string>
-		</dict>
-		<key>MacOS/__preview.dylib</key>
-		<dict>
-			<key>cdhash</key>
-			<data>
-			D5x497wZT9XpFGz0VKLEMjil3iw=
-			</data>
-			<key>requirement</key>
-			<string>cdhash H"0f9c78f7bc194fd5e9146cf454a2c43238a5de2c"</string>
-		</dict>
 		<key>Resources/AppIcon.icns</key>
 		<dict>
 			<key>hash2</key>
