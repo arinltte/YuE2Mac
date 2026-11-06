@@ -26,6 +26,12 @@ Powered by YuE2 (a Mixture-of-Transformers model) running at 8-bit on the Apple 
 
 Listed in [awesome-YuE](https://github.com/RevolutionLA/awesome-YuE) — the curated directory of the YuE / YuE2 ecosystem.
 
+## 🆕 What's new in v0.4.0
+
+- Queue multiple versions of the same song with random seeds to generate one at a time
+- Reload previously generated lyrics, style and parameters from the song menu inside the library
+
+
 ## 🆕 What's new in v0.3.0
 
 The studio grew a proper listening workflow — playlist, ratings and bulk actions in the library — plus smarter filenames, a system appearance mode, and an honest time-remaining estimate:
