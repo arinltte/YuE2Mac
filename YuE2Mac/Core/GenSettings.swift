@@ -169,11 +169,12 @@ final class SettingsStore {
     }
 
     /// Fold the instrumental toggle into the real style prompt sent to the model.
+    static let instrumentalSuffix = "instrumental, no vocals"
+
     func effectiveStyle() -> String {
         guard instrumental else { return style }
         let base = style.trimmingCharacters(in: .whitespacesAndNewlines)
-        let suffix = "instrumental, no vocals"
-        return base.isEmpty ? suffix : base + ", " + suffix
+        return base.isEmpty ? Self.instrumentalSuffix : base + ", " + Self.instrumentalSuffix
     }
 
     /// Strip lyrics to structure tags only for instrumentals (the model's known quirk).
@@ -191,6 +192,44 @@ final class SettingsStore {
         let trimmed = seed.trimmingCharacters(in: .whitespaces)
         if let n = Int(trimmed) { return n }
         return Int.random(in: 0...999_999)
+    }
+
+    /// Restore a song's full parameter set (style, lyrics, planning, quality,
+    /// sampling, seed, model) into the editor so it can be tweaked and
+    /// re-generated. Used by the library's "Reuse parameters" action.
+    func loadSongParameters(_ meta: SongMetadata, draft: Bool) {
+        // Instrumental songs saved the folded style prompt; restore the toggle
+        // and strip the suffix so it isn't applied twice on the next generate.
+        if meta.style == Self.instrumentalSuffix {
+            instrumental = true
+            style = ""
+        } else if meta.style.hasSuffix(", " + Self.instrumentalSuffix) {
+            instrumental = true
+            style = String(meta.style.dropLast(Self.instrumentalSuffix.count + 2))
+        } else {
+            instrumental = false
+            style = meta.style
+        }
+        lyrics = meta.lyrics
+        planning = meta.cot
+        // A finished song's real quality is the full render, not the draft's 8.
+        steps = Double(meta.fullSteps ?? meta.steps)
+        cfgScale = meta.cfg
+        maxTokens = Double(meta.maxTokens)
+        seed = String(meta.seed)
+        draftPreview = draft
+        if let s = meta.sampling {
+            temperature = s.temperature
+            topP = s.topP
+            topK = s.topK
+            repPenalty = s.repetitionPenalty
+        } else {
+            resetSampling()
+        }
+        // Restore the model too, if it still exists on disk.
+        if !meta.model.isEmpty, FileManager.default.fileExists(atPath: meta.model) {
+            modelDir = meta.model
+        }
     }
 
     /// Where generated songs are saved. Defaults to the app's Output folder.

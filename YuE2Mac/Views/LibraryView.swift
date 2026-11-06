@@ -1,8 +1,8 @@
 //
 //  LibraryView.swift — every song YuE2Mac has made, with its metadata: draft
-//  badges, seeds, durations, replay, M4A export, Finder, retakes, finish and
-//  score editing. Shown as a resizable right-hand pane (Analysis §2.A.4/5 —
-//  ianiv-style library, native).
+//  badges, seeds, durations, replay, M4A export, Finder, retakes, parameter
+//  reuse, batched version queues, finish and score editing. Shown as a
+//  resizable right-hand pane (Analysis §2.A.4/5 — ianiv-style library, native).
 //
 
 import SwiftUI
@@ -143,6 +143,8 @@ struct LibraryView: View {
                                        onToggleSelect: { toggleSelection(song) },
                                        onEdit: { editingSong = song },
                                        onDelete: { confirmingDelete = song },
+                                       onReuse: { reuseParameters(from: song) },
+                                       onQueueVersions: { queueVersions(of: song, count: $0) },
                                        onNote: { statusNote = $0 },
                                        onToggleLike: {
                                            SongLibrary.toggleLike(song)
@@ -328,6 +330,29 @@ struct LibraryView: View {
             : "Added \(targets.count) song\(targets.count == 1 ? "" : "s") to playlist"
     }
 
+    /// "Reuse": load the song's full parameter set into the editor so it can
+    /// be tweaked and re-generated.
+    @MainActor
+    private func reuseParameters(from song: LibrarySong) {
+        guard let meta = song.metadata else { return }
+        SettingsStore.shared.loadSongParameters(meta, draft: song.isDraft)
+        statusNote = "Loaded “\(song.title)” into the editor — tweak it and generate"
+    }
+
+    /// Queue `count` versions of a song: same parameters, fresh seed each.
+    @MainActor
+    private func queueVersions(of song: LibrarySong, count: Int) {
+        let wasBusy = engine.isRunning
+        let queued = engine.enqueueVersions(of: song, count: count)
+        guard queued > 0 else {
+            statusNote = "Can't queue versions — this song has no saved parameters"
+            return
+        }
+        statusNote = wasBusy
+            ? "Queued \(queued) versions of “\(song.title)” — they'll start after the current song finishes"
+            : "Queued \(queued) versions of “\(song.title)” — starting now, fresh seed each"
+    }
+
     @MainActor
     private func deleteSelected() {
         let targets = selectedSongs
@@ -353,6 +378,8 @@ private struct LibraryRow: View {
     var onToggleSelect: () -> Void
     var onEdit: () -> Void
     var onDelete: () -> Void
+    var onReuse: () -> Void
+    var onQueueVersions: (Int) -> Void
     var onNote: (String) -> Void
     var onToggleLike: () -> Void
     var onToggleDislike: () -> Void
@@ -433,12 +460,27 @@ private struct LibraryRow: View {
                         }
                     }
                     if song.canVary {
+                        Button(action: onReuse) {
+                            Label("Reuse parameters", systemImage: "arrow.uturn.left")
+                        }
+                        .help("Load this song's style, lyrics and settings back into the editor")
                         Button {
+                            let wasBusy = engine.isRunning
                             engine.enqueueVariation(of: song)
-                            onNote("Queued a new take of “\(song.title)”…")
+                            onNote(wasBusy
+                                ? "Queued a new take of “\(song.title)” — it'll start after the current song finishes"
+                                : "Queued a new take of “\(song.title)” — starting now")
                         } label: {
                             Label("New take (new seed)", systemImage: "arrow.counterclockwise.circle")
                         }
+                        Menu {
+                            ForEach(2...GenerationEngine.maxVersions, id: \.self) { n in
+                                Button("\(n) versions") { onQueueVersions(n) }
+                            }
+                        } label: {
+                            Label("Queue multiple versions…", systemImage: "rectangle.stack")
+                        }
+                        .help("Same parameters, a fresh random seed per version — all queued at once")
                     }
                     Divider()
                     Button {

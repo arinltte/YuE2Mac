@@ -98,8 +98,13 @@ final class GenerationEngine {
 
     private var process: Process?
     private var runningJobID: UUID?
+    /// Reclaims a dead engine process whose termination handler never fired.
+    private var watchdog: Task<Void, Never>?
+    /// True once the current child's run() succeeded (guards the dead-process checks).
+    private var processSpawned = false
 
     deinit {
+        watchdog?.cancel()
         process?.terminate()
     }
 
@@ -177,6 +182,51 @@ final class GenerationEngine {
         return job.id
     }
 
+    /// How many versions of one song the user can queue at once.
+    static let maxVersions = 9
+
+    /// Queue `count` versions of an existing song (2…maxVersions): identical
+    /// parameters, but a fresh random seed per version. Each take is named
+    /// "Title N" so the library can tell them apart; all land in the queue at
+    /// once and render one after another. Returns how many were queued (0 if
+    /// the song has no metadata to copy from).
+    @discardableResult
+    func enqueueVersions(of song: LibrarySong, count: Int) -> Int {
+        guard let meta = song.metadata else { return 0 }
+        let n = min(max(count, 1), Self.maxVersions)
+        // Keep the " N" suffix inside newSongFolder's 40-char name budget.
+        let base = String(song.title.prefix(38))
+        var usedSeeds = Set<Int>()
+        for i in 1...n {
+            // Distinct seeds: same lyrics + same seed would render the same song.
+            var seed = Int.random(in: 0...999_999)
+            while usedSeeds.contains(seed) { seed = Int.random(in: 0...999_999) }
+            usedSeeds.insert(seed)
+
+            var job = Job(folder: newSongFolder(named: "\(base) \(i)"))
+            job.kind = .generate
+            // The folder name is the source of truth (sanitized + collision-
+            // resolved), so title and files always agree.
+            job.title = job.folder.lastPathComponent
+            job.wavName = wavName(forFolder: job.folder, full: false)
+            job.engineRoot = SettingsStore.shared.engineRoot ?? AppPaths.scriptsDir.path
+            job.modelDir = meta.model.isEmpty ? (SettingsStore.shared.modelDir ?? "") : meta.model
+            job.style = meta.style
+            job.lyrics = meta.lyrics
+            job.cot = meta.cot
+            job.seed = seed
+            job.cfg = meta.cfg
+            job.steps = meta.fullSteps ?? meta.steps
+            job.maxTokens = meta.maxTokens
+            job.sampling = meta.sampling ?? SamplingOverrides.engineDefaults
+            job.draft = false
+            job.sourceFolder = song.folder?.path
+            jobs.append(job)
+        }
+        runNextIfNeeded()
+        return n
+    }
+
     /// Upgrade a draft to full quality: same tokens, same seed, 32 steps.
     @discardableResult
     func enqueueFinish(of song: LibrarySong) -> UUID? {
@@ -242,8 +292,16 @@ final class GenerationEngine {
         }
         guard jobs[idx].state == .running else { return }
         jobs[idx].state = .cancelled
-        process?.terminate()
-        process?.interrupt()   // give Python a chance to unwind mid-loop
+        if let p = process, p.isRunning {
+            p.terminate()
+            p.interrupt()   // give Python a chance to unwind mid-loop
+            // If it's still alive after the grace period, force-kill so a wedged
+            // engine can never hold the queue hostage.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                if p.isRunning { kill(p.processIdentifier, SIGKILL) }
+            }
+        }
     }
 
     func remove(id: UUID) {
@@ -352,11 +410,74 @@ final class GenerationEngine {
     // MARK: Runner
 
     private func runNextIfNeeded() {
+        // A child that exited without its termination handler running would block
+        // the queue forever — reclaim the slot before deciding to wait.
+        if let p = process, processSpawned && !p.isRunning {
+            reclaimDeadProcess()
+        }
         // Keyed on the process, not currentJob: a cancelled job's process may
         // still be winding down, and two model loads at once would thrash RAM.
         guard process == nil,
               let idx = jobs.firstIndex(where: { $0.state == .queued }) else { return }
         start(idx)
+    }
+
+    /// The engine process is dead but its termination handler never fired (or the
+    /// job row was removed while it wound down). Finalise the job honestly and
+    /// free the slot so queued work can start.
+    private func reclaimDeadProcess() {
+        guard let jobID = runningJobID, let idx = index(jobID) else {
+            process?.terminationHandler = nil
+            process = nil
+            runningJobID = nil
+            runNextIfNeeded()
+            return
+        }
+        process?.terminationHandler = nil
+        process = nil
+        runningJobID = nil
+
+        guard jobs[idx].state == .running else {
+            // Cancelled/finished — the termination handler owns the bookkeeping;
+            // just make sure queued work isn't left waiting behind a dead slot.
+            runNextIfNeeded()
+            return
+        }
+
+        let job = jobs[idx]
+        if FileManager.default.fileExists(atPath: job.wavURL.path) {
+            // It actually finished — the handler just hasn't run yet.
+            writeMetadata(for: job)
+            jobs[idx].state = .finished
+            jobs[idx].phase = .finished
+            jobs[idx].progress = 1.0
+            jobs[idx].detail = "Song complete."
+            jobs[idx].finishedAt = Date()
+            lastFinishedID = jobID
+            libraryRevision += 1
+        } else {
+            jobs[idx].state = .failed
+            jobs[idx].phase = .failed
+            jobs[idx].progress = nil
+            jobs[idx].detail = "The engine stopped unexpectedly."
+            cleanupPartials(of: job)
+        }
+        runNextIfNeeded()
+    }
+
+    /// While a job runs, re-check the child every few seconds: if it died without
+    /// its termination handler firing, reclaim the slot so queued work starts.
+    private func startWatchdog() {
+        watchdog?.cancel()
+        watchdog = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                guard let self, let p = self.process else { return }   // no child — done
+                guard self.processSpawned, !p.isRunning else { continue }   // alive (or not yet spawned)
+                self.reclaimDeadProcess()   // ends with runNextIfNeeded()
+                return
+            }
+        }
     }
 
     private func start(_ idx: Int) {
@@ -366,6 +487,7 @@ final class GenerationEngine {
               !job.engineRoot.isEmpty else {
             jobs[idx].state = .failed
             jobs[idx].errorMessage = "Missing engine files. Run Setup from Settings."
+            runNextIfNeeded()   // don't leave queued work waiting behind a job that can't start
             return
         }
         let engineRoot = URL(fileURLWithPath: job.engineRoot)
@@ -381,6 +503,7 @@ final class GenerationEngine {
             guard let pro = proScript else {
                 jobs[idx].state = .failed
                 jobs[idx].errorMessage = "The Pro engine add-on (yue2_pro.py) isn't installed. Reinstall the app."
+                runNextIfNeeded()   // don't leave queued work waiting behind a job that can't start
                 return
             }
             script = pro
@@ -392,6 +515,7 @@ final class GenerationEngine {
         guard FileManager.default.fileExists(atPath: script.path) else {
             jobs[idx].state = .failed
             jobs[idx].errorMessage = "Engine script not found: \(script.lastPathComponent). Run Setup from Settings."
+            runNextIfNeeded()   // don't leave queued work waiting behind a job that can't start
             return
         }
 
@@ -421,7 +545,7 @@ final class GenerationEngine {
         let jobID = job.id
         process.terminationHandler = { [weak self] proc in
             Task { @MainActor [weak self] in
-                self?.handleTermination(jobID: jobID, status: proc.terminationStatus)
+                self?.handleTermination(jobID: jobID, proc: proc, status: proc.terminationStatus)
             }
         }
 
@@ -432,18 +556,24 @@ final class GenerationEngine {
             let text = String(decoding: data, as: UTF8.self)
             for line in text.components(separatedBy: "\n") {
                 let captured = line
-                Task { @MainActor in self.parse(line: captured) }
+                Task { @MainActor in self.parse(line: captured, jobID: jobID) }
             }
         }
 
         self.process = process
+        processSpawned = false   // flipped once run() succeeds (below)
+        startWatchdog()
         Task { @MainActor in
-            do { try process.run() }
+            do {
+                try process.run()
+                processSpawned = true
+            }
             catch {
                 if let i = self.index(jobID) {
                     self.jobs[i].state = .failed
                     self.jobs[i].errorMessage = error.localizedDescription
                 }
+                self.watchdog?.cancel()
                 self.process = nil
                 self.runningJobID = nil
                 self.runNextIfNeeded()
@@ -484,9 +614,11 @@ final class GenerationEngine {
         jobs[idx].phaseStartedAt = Date()
     }
 
-    private func parse(line raw: String) {
+    private func parse(line raw: String, jobID: UUID) {
         let line = raw.trimmingCharacters(in: .whitespaces)
-        guard !line.isEmpty, let id = runningJobID, let idx = index(id) else { return }
+        // Ignore stale lines from a previous child (its buffer can drain after
+        // the slot has already moved on to a newer job).
+        guard !line.isEmpty, let id = runningJobID, jobID == id, let idx = index(id) else { return }
 
         if line.hasPrefix("[load]") {
             setPhase(.loading, at: idx)
@@ -556,11 +688,15 @@ final class GenerationEngine {
         }
     }
 
-    private func handleTermination(jobID: UUID, status: Int32) {
+    private func handleTermination(jobID: UUID, proc: Process, status: Int32) {
         guard let idx = index(jobID) else { return }
-        process?.terminationHandler = nil
-        process = nil
-        runningJobID = nil
+        proc.terminationHandler = nil
+        // Only release the slot if this is still the current child — a newer job
+        // may have taken it after reclaimDeadProcess() ran first.
+        if process === proc {
+            process = nil
+            runningJobID = nil
+        }
         let job = jobs[idx]
 
         let wavExists = FileManager.default.fileExists(atPath: job.wavURL.path)
@@ -579,7 +715,7 @@ final class GenerationEngine {
             jobs[idx].progress = nil
             jobs[idx].detail = "Stopped by you."
             cleanupPartials(of: job)
-        } else {
+        } else if job.state == .running {
             jobs[idx].state = .failed
             jobs[idx].phase = .failed
             jobs[idx].progress = nil
